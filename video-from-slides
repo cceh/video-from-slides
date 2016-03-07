@@ -5,7 +5,7 @@ set -u
 
 D=$(dirname $0)
 
-slides=$(find "$D/slides" -type f | sort)
+slides=$(find "$D/slides" -iname '*.pdf' -type f | sort)
 
 . "$D/video.params"
 
