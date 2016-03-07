@@ -104,6 +104,7 @@ done
 
 # FIXME: add audio track
 
-avconv -framerate "$FPS" -i "$D/frames/frame-%05d.png" -c:v "$CODEC" -r "$FPS" -qscale 1 -y "$VIDEO_PATH"
+video_opts="-framerate $FPS -i $D/frames/frame-%05d.png -c:v $CODEC -r $FPS -qscale 1"
+avconv $video_opts -y "$VIDEO_PATH"
 
 # Licensed under the ISC licence, see LICENCE.ISC for details.
