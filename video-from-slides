@@ -1,0 +1,109 @@
+#!/bin/bash
+
+set -e
+set -u
+
+D=$(dirname $0)
+
+slides=$(find "$D/slides" -type f | sort)
+
+. "$D/video.params"
+
+VIDEO_PATH='posterslam.mp4'
+[ "$#" -ge 1 ] && VIDEO_PATH="$1"
+
+rm -Rf "$D/pieces/" && mkdir -p "$D/pieces/"
+rm -Rf "$D/frames/" && mkdir -p "$D/frames/"
+
+i=0
+for s in $slides ; do
+	i=$(( i + 1 ))
+
+	name=$(basename $s .pdf)
+
+	echo "Processing '$name', first frame $i"
+
+	### Turn PDFs into fixed-size PNGs.
+
+	pdftoppm_opts="-scale-to-y -1 -scale-to-x ${YDIM}"
+	pdftoppm $pdftoppm_opts "$s" "$D/pieces/${name}"
+
+	s_ppm="$D/pieces/${name}-1.ppm"
+	s_png="$D/pieces/${name}.png"
+
+	convert_opts="-resize ${XDIM}x${YDIM}!"
+	convert "$s_ppm" $convert_opts "$s_png"
+	rm -f "$s_ppm"
+
+
+	### Create black and white version for the introduction.
+
+	bw_png="$D/pieces/${name}-bw.png"
+	convert "$s_png" -colorspace 'Gray' "$bw_png"
+
+	countdown_opts=""
+	countdown_opts="$countdown_opts -undercolor #00000080"
+	countdown_opts="$countdown_opts -gravity SouthEast"
+	countdown_opts="$countdown_opts -font Ubuntu-Bold"
+	countdown_opts="$countdown_opts -pointsize 300"
+
+	annotate="-annotate +$((XDIM/10))+$((YDIM/10))"
+
+	### In the last second of the countdown reuse the b&w version.
+
+	c0_png="$D/pieces/${name}-c0.png"
+	ln "$bw_png" "$c0_png"
+
+	### The last 4 seconds display a digit in red.
+
+	countdown_opts="$countdown_opts -fill red"
+	for c in $(seq 4 -1 1) ; do
+		cX_png="$D/pieces/${name}-c${c}.png"
+		convert "$s_png" $countdown_opts $annotate " $c " "$cX_png"
+	done
+
+	### The first seconds of the countdown display a digit in orange.
+
+	countdown_opts="$countdown_opts -fill orange"
+	for c in $(seq 9 -1 5) ; do
+		cX_png="$D/pieces/${name}-c${c}.png"
+		convert "$s_png" $countdown_opts $annotate " $c " "$cX_png"
+	done
+
+	### Manually generate all the frame that compose the video.
+	#
+	# This is much easier than dealing with the various options of
+	# avconv.
+
+	first_frame=$i
+	first_frame_normal=$(( i + $SLOWSTART_SECS * FPS ))
+	last_frame_normal=$(( first_frame_normal + MAIN_SECS * FPS ))
+	last_frame_total=$(( last_frame_normal + COUNTDOWN_SECS * FPS ))
+
+	for n in $(seq $first_frame $last_frame_total) ; do
+		printf -v nn "%05d" $n
+		s_frame="$D/frames/frame-${nn}.png"
+
+		if [ $n -le $first_frame_normal ] ; then
+			# for the first frames use the b&w version
+			ln "$bw_png" "$s_frame"
+		elif [ $n -le $last_frame_normal ] ; then
+			# for the main part use the slide itself
+			ln "$s_png" "$s_frame"
+		else
+			# during the last seconds use the countdown frames
+			c=$(( ($last_frame_total - $n) / FPS ))
+			cX_png="$D/pieces/${name}-c${c}.png"
+
+			ln "$cX_png" "$s_frame"
+		fi
+	done
+
+	i=$last_frame_total
+done
+
+# FIXME: add audio track
+
+avconv -framerate "$FPS" -i "$D/frames/frame-%05d.png" -c:v "$CODEC" -r "$FPS" -qscale 1 -y "$VIDEO_PATH"
+
+# Licensed under the ISC licence, see LICENCE.ISC for details.
