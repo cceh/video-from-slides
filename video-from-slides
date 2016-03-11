@@ -6,6 +6,7 @@ set -u
 D=$(dirname $0)
 
 slides=$(find "$D/slides" -iname '*.pdf' -type f | sort)
+num_slides=$(echo "$slides" | wc -l)
 
 . "$D/video.params"
 
@@ -14,6 +15,8 @@ VIDEO_PATH='posterslam.mp4'
 
 rm -Rf "$D/pieces/" && mkdir -p "$D/pieces/"
 rm -Rf "$D/frames/" && mkdir -p "$D/frames/"
+
+echo "Mixing ${num_slides} slides"
 
 i=0
 for s in $slides ; do
@@ -102,9 +105,8 @@ for s in $slides ; do
 	i=$last_frame_total
 done
 
-# FIXME: add audio track
-
 video_opts="-framerate $FPS -i $D/frames/frame-%05d.png -c:v $CODEC -r $FPS -qscale 1"
-avconv $video_opts -y "$VIDEO_PATH"
+audio_opts="-i $D/audio/loop-${num_slides}.wav -c:a $AUDIO_CODEC"
+avconv $video_opts $audio_opts -y "$VIDEO_PATH"
 
 # Licensed under the ISC licence, see LICENCE.ISC for details.

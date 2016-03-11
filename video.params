@@ -8,5 +8,6 @@ MAIN_SECS=$((TOTAL_SECS - SLOWSTART_SECS - COUNTDOWN_SECS))
 
 FPS=10
 CODEC=libx264
+AUDIO_CODEC=libmp3lame
 
 # Licensed under the ISC licence, see LICENCE.ISC for details.
