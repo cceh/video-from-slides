@@ -81,7 +81,7 @@ for s in $slides ; do
 	first_frame=$i
 	first_frame_normal=$(( i + $SLOWSTART_SECS * FPS ))
 	last_frame_normal=$(( first_frame_normal + MAIN_SECS * FPS ))
-	last_frame_total=$(( last_frame_normal + COUNTDOWN_SECS * FPS ))
+	last_frame_total=$(( last_frame_normal + COUNTDOWN_SECS * FPS -1 ))
 
 	for n in $(seq $first_frame $last_frame_total) ; do
 		printf -v nn "%05d" $n
